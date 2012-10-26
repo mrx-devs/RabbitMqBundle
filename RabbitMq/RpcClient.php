@@ -46,6 +46,7 @@ class RpcClient extends BaseAmqp
 
     public function processMessage(AMQPMessage $msg)
     {
+        //Used to be: $this->replies[$msg->get('correlation_id')] = unserialize($msg->body);
         $this->replies[$msg->get('correlation_id')] = $msg->body;
     }
 }
