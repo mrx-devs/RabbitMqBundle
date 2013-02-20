@@ -39,7 +39,8 @@ class RpcClient extends BaseAmqp
         {
             $this->ch->wait();
         }
-
+        
+        $this->requests = 0; //reset this!
         $this->ch->basic_cancel($this->queueName);
         return $this->replies;
     }
