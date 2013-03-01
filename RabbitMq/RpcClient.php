@@ -41,9 +41,10 @@ class RpcClient extends BaseAmqp
         }
         
         $this->requests = 0; //reset this!
-        $replies = array();
+        $replies = $this->replies;
+        $this->replies = array();
         $this->ch->basic_cancel($this->queueName);
-        return $this->replies;
+        return $replies;
     }
 
     public function processMessage(AMQPMessage $msg)
