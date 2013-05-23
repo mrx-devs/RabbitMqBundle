@@ -61,8 +61,6 @@ class RpcClient extends BaseAmqp
             if( !$timeout ) $timeout = 60; //60 seconds
         }
         
-        print "TIMEOUT: " . $timeout  . "\n";
-        
         while (count($this->replies) < $this->requests) {
             $this->ch->wait(null, false, $timeout);
         }
