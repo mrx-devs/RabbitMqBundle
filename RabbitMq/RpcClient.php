@@ -27,14 +27,20 @@ class RpcClient extends BaseAmqp
         
         $msgProperties = array_merge( $default_message_properties, $msgProperties );
         
-        //Know how long we should wait for all messages to respond.
+        //Know how long we should wait for all messages to respond (if expiration times are set on ALL messages).
         if( array_key_exists('expiration',$msgProperties) )
         {
-            if( $msgProperties['expiration'] > $this->expiry_time )
+            if( $msgProperties['expiration'] > $this->expiry_time)
             {
                 $this->expiry_time = (int) $msgProperties['expiration'];
             }
         }
+        else
+        {
+            //If there's any message in this stack with no expiry time, then ignore this shortend expiry
+            $this->expiry_time = 0;
+        }
+        
         
         if (empty($requestId)) {
             throw new \InvalidArgumentException('You must provide a $requestId');
@@ -53,7 +59,9 @@ class RpcClient extends BaseAmqp
 
         if($this->expiry_time)
         {
-            $timeout = (int) ($this->expiry_time / 1000) + 1; //add a second just to be safe
+            //add a second just to be safe that the there's not any lengthy operations between the adding of message and
+            //the retrieving of responses.
+            $timeout = (int) ($this->expiry_time / 1000) + 1; 
         }
         else
         {

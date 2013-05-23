@@ -151,7 +151,7 @@ class OldSoundRabbitMqExtension extends Extension
     {
         foreach ($this->config['rpc_clients'] as $key => $client) {
             $definition = new Definition('%old_sound_rabbit_mq.rpc_client.class%');
-            $definition->addMethodCall('initClient');
+            $definition->addMethodCall('initClient', array($client['timeout']) );
             $this->injectConnection($definition, $client['connection']);
             if ($this->collectorEnabled) {
                 $this->injectLoggedChannel($definition, $key, $client['connection']);
