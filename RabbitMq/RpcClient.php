@@ -11,9 +11,11 @@ class RpcClient extends BaseAmqp
     protected $replies = array();
     protected $queueName;
     protected $expiry_time = 0;
+    protected $timeout = 0;
     
-    public function initClient()
+    public function initClient( $timeout = 10 )
     {
+        $this->timeout = $timeout;
         list($this->queueName, ,) = $this->ch->queue_declare("", false, false, true, true);
     }
 
@@ -56,20 +58,17 @@ class RpcClient extends BaseAmqp
     public function getReplies()
     {
         $this->ch->basic_consume($this->queueName, '', false, true, false, false, array($this, 'processMessage'));
-
+        
         if($this->expiry_time)
         {
-            //add a second just to be safe that the there's not any lengthy operations between the adding of message and
-            //the retrieving of responses.
+            //add a second just to be safe that the there's not any lengthy operations between the adding of the message
+            //and the retrieval of responses.
             $timeout = (int) ($this->expiry_time / 1000) + 1; 
         }
         else
         {
-            $timeout = apache_getenv('AMQP_WAIT');
-            if( !$timeout ) $timeout = 60; //60 seconds
+            $timeout = $this->timeout;
         }
-        
-        print "TIMEOUT: " . $timeout  . "\n";
         
         while (count($this->replies) < $this->requests) {
             $this->ch->wait(null, false, $timeout);
@@ -87,5 +86,10 @@ class RpcClient extends BaseAmqp
     {
         //Used to be: $this->replies[$msg->get('correlation_id')] = unserialize($msg->body);
         $this->replies[$msg->get('correlation_id')] = $msg->body;
+    }
+    
+    public function getTimeout()
+    {
+        return $this->timeout;
     }
 }
