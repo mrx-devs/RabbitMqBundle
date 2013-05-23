@@ -4,7 +4,6 @@ namespace OldSound\RabbitMqBundle\DependencyInjection;
 
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
-use Symfony\Component\Config\Definition\Builder\NodeBuilder;
 use \Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 
 /**
@@ -22,6 +21,7 @@ class Configuration implements ConfigurationInterface
             ->children()
                 ->booleanNode('debug')->defaultValue('%kernel.debug%')->end()
                 ->booleanNode('enable_collector')->defaultValue(false)->end()
+                ->booleanNode('sandbox')->defaultValue(false)->end()
                 ->arrayNode('connections')
                     ->useAttributeAsKey('key')
                     ->canBeUnset()
@@ -41,6 +41,7 @@ class Configuration implements ConfigurationInterface
                     ->useAttributeAsKey('key')
                     ->prototype('array')
                         ->append($this->getExchangeConfiguration())
+                        ->append($this->getQueueConfiguration())
                         ->children()
                             ->scalarNode('connection')->defaultValue('default')->end()
                         ->end()
@@ -56,6 +57,14 @@ class Configuration implements ConfigurationInterface
                         ->children()
                             ->scalarNode('connection')->defaultValue('default')->end()
                             ->scalarNode('callback')->isRequired()->end()
+                            ->arrayNode('qos_options')
+                                ->canBeUnset()
+                                ->children()
+                                    ->scalarNode('prefetch_size')->defaultValue(0)->end()
+                                    ->scalarNode('prefetch_count')->defaultValue(0)->end()
+                                    ->booleanNode('global')->defaultFalse()->end()
+                                ->end()
+                            ->end()
                         ->end()
                     ->end()
                 ->end()
@@ -128,8 +137,11 @@ class Configuration implements ConfigurationInterface
                 ->booleanNode('nowait')->defaultFalse()->end()
                 ->variableNode('arguments')->defaultNull()->end()
                 ->scalarNode('ticket')->defaultNull()->end()
+                ->arrayNode('routing_keys')
+                    ->prototype('scalar')->end()
+                    ->defaultValue(array())
+                ->end()
             ->end()
         ;
     }
 }
-
