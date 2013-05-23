@@ -74,6 +74,7 @@ class Configuration implements ConfigurationInterface
                     ->prototype('array')
                         ->children()
                             ->scalarNode('connection')->defaultValue('default')->end()
+                            ->scalarNode('timeout')->defaultValue(10)->end()
                         ->end()
                     ->end()
                 ->end()
