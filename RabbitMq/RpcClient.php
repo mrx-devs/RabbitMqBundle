@@ -10,12 +10,13 @@ class RpcClient extends BaseAmqp
     protected $requests = 0;
     protected $replies = array();
     protected $queueName;
-    protected $expiry_time = 0;
     protected $timeout = 0;
+    protected $messages = array();
     
     public function initClient( $timeout = 10 )
     {
         $this->timeout = $timeout;
+        $this->messages = array();
         list($this->queueName, ,) = $this->ch->queue_declare("", false, false, true, true);
     }
 
@@ -29,26 +30,12 @@ class RpcClient extends BaseAmqp
         
         $msgProperties = array_merge( $default_message_properties, $msgProperties );
         
-        //Know how long we should wait for all messages to respond (if expiration times are set on ALL messages).
-        if( array_key_exists('expiration',$msgProperties) )
-        {
-            if( $msgProperties['expiration'] > $this->expiry_time)
-            {
-                $this->expiry_time = (int) $msgProperties['expiration'];
-            }
-        }
-        else
-        {
-            //If there's any message in this stack with no expiry time, then ignore this shortend expiry
-            $this->expiry_time = 0;
-        }
-        
-        
         if (empty($requestId)) {
             throw new \InvalidArgumentException('You must provide a $requestId');
         }
 
         $msg = new AMQPMessage($msgBody, $msgProperties);
+        $this->messages[] = $msg;
 
         $this->ch->basic_publish($msg, $server, $routingKey);
 
@@ -57,18 +44,27 @@ class RpcClient extends BaseAmqp
 
     public function getReplies()
     {
-        $this->ch->basic_consume($this->queueName, '', false, true, false, false, array($this, 'processMessage'));
+        $max_wait = 0;
+        $all_messages_expire = true;
         
-        if($this->expiry_time)
+        //Calculate the max amount of time we should wait if all messages have expiration times on them.
+        foreach($this->messages as $message)
         {
-            //add a second just to be safe that the there's not any lengthy operations between the adding of the message
-            //and the retrieval of responses.
-            $timeout = (int) ($this->expiry_time / 1000) + 1; 
+            $props = $message->get_properties();
+            
+            if( array_key_exists('expiration', $props) && $props['expiration'] > $max_wait ){
+                $max_wait = ceil( $props['expiration'] / 1000 );
+            }
+            else{
+                $all_messages_expire = false;
+                break; //we know max wait won't be used so get out of here
+            }
         }
-        else
-        {
-            $timeout = $this->timeout;
-        }
+        
+        //Don't wait longer than we have to. IE if it's only a read, and the message expires in 5 seconds why wait for full timeout
+        $timeout =  ( $all_messages_expire ) ?  $max_wait : $this->timeout;
+        
+        $this->ch->basic_consume($this->queueName, '', false, true, false, false, array($this, 'processMessage'));
         
         while (count($this->replies) < $this->requests) {
             $this->ch->wait(null, false, $timeout);
