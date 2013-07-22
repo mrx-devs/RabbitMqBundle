@@ -12,12 +12,16 @@ class RpcClient extends BaseAmqp
     protected $queueName;
     protected $timeout = 0;
     protected $messages = array();
+    protected $queue_declared = false;
     
     public function initClient( $timeout = 10 )
     {
         $this->timeout = $timeout;
         $this->messages = array();
-        list($this->queueName, ,) = $this->ch->queue_declare("", false, false, true, true);
+        if (!$this->queue_declared) {
+            list($this->queueName, ,) = $this->ch->queue_declare("", false, false, true, true);
+            $this->queue_declared = true;
+        }
     }
 
     public function addRequest($msgBody, $server, $requestId = null, $routingKey = '', $msgProperties = array() )
