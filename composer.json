@@ -1,5 +1,5 @@
 {
-    "name": "mrx-devs/rabbitmq-bundle",
+    "name": "oldsound/rabbitmq-bundle",
     "description": "Integrates php-amqplib with Symfony2 and RabbitMq",
     "keywords": ["symfony2", "rabbitmq", "message", "queue"],
     "type": "symfony-bundle",
