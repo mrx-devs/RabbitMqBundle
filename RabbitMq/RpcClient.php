@@ -34,6 +34,9 @@ class RpcClient extends BaseAmqp
         $this->getChannel()->basic_publish($msg, $server, $routingKey);
 
         $this->requests++;
+        
+        //Start consuming right away, because if getReplies() is never called our reply queues stick around forever if fatal error/apache killed
+        $this->getChannel()->basic_consume($this->getQueueName(), '', false, true, false, false, array($this, 'processMessage'));
 
         if ($expiration > $this->timeout) {
             $this->timeout = $expiration;
@@ -43,7 +46,9 @@ class RpcClient extends BaseAmqp
     public function getReplies()
     {
         $this->replies = array();
-        $this->getChannel()->basic_consume($this->getQueueName(), '', false, true, false, false, array($this, 'processMessage'));
+        
+        //We already setup the consummer in addRequest, so we don't need it here.
+        //$this->getChannel()->basic_consume($this->getQueueName(), '', false, true, false, false, array($this, 'processMessage'));
 
         while (count($this->replies) < $this->requests) {
             $this->getChannel()->wait(null, false, $this->timeout);
